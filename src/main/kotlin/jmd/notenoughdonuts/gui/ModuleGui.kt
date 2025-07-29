@@ -15,6 +15,16 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
     private var closeButtonHovered: Boolean = false
     private var searchText: String = ""
     private var isSearching: Boolean = false
+    
+    // Layout constants
+    private val screenPadding: Int = 10
+    private val titleHeight: Int = 40
+    private var searchBarY: Int = 0
+
+    init {
+        // Initialize dependent values after Screen is constructed
+        this.searchBarY = screenPadding + (titleHeight - 9) / 2  // 9 is default font height
+    }
 
     override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
         super.render(context, mouseX, mouseY, delta)
@@ -22,80 +32,95 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
         // Draw solid dark background
         context.fill(0, 0, width, height, Color(17, 17, 17, 255).rgb)
 
-        // Draw sidebar background
-        context.fill(0, 0, sidebarWidth, height, Color(24, 24, 24, 255).rgb)
+        // Draw title bar container
+        val titleBarColor = Color(24, 24, 24, 255)
+        val borderColor = Color(48, 48, 48, 255)
         
-        // Draw close button
-        closeButtonHovered = isMouseOverCloseButton(mouseX, mouseY)
-        val closeButtonColor = if (closeButtonHovered) Color(255, 50, 50) else Color(170, 170, 170)
-        
-        val x = width - 20
-        val y = 5
-        
-        context.drawTextWithShadow(
-            textRenderer,
-            Text.literal("✕"),
-            x,
-            y,
-            closeButtonColor.rgb
-        )
+        // Title bar background
+        context.fill(screenPadding, screenPadding, width - screenPadding, screenPadding + titleHeight, titleBarColor.rgb)
+        // Title bar border
+        drawBorder(context, screenPadding, screenPadding, width - screenPadding, screenPadding + titleHeight, borderColor.rgb)
 
-        // Draw mod title
-        context.drawTextWithShadow(
-            textRenderer,
-            Text.literal("Not Enough Donuts"),
-            10,
-            10,
-            Color.WHITE.rgb
-        )
-
-        // Draw search bar
-        val searchBarY = 35
-        val searchBoxWidth = sidebarWidth - 20
-        
-        context.fill(
-            10,
-            searchBarY,
-            10 + searchBoxWidth,
-            searchBarY + 15,
-            Color(32, 32, 32, 255).rgb
-        )
-
-        context.drawTextWithShadow(
-            textRenderer,
-            Text.literal("⚲"),
-            12,
-            searchBarY + 3,
-            Color(170, 170, 170).rgb
-        )
-
-        if (searchText.isEmpty() && !isSearching) {
+        if (!isSearching) {
+            // Draw mod title
             context.drawTextWithShadow(
                 textRenderer,
-                Text.literal("Search..."),
-                25,
-                searchBarY + 3,
-                Color(90, 90, 90).rgb
-            )
-        } else {
-            context.drawTextWithShadow(
-                textRenderer,
-                Text.literal(searchText),
-                25,
-                searchBarY + 3,
+                Text.literal("Not Enough Donuts"),
+                screenPadding + 10,
+                screenPadding + (titleHeight - textRenderer.fontHeight) / 2,
                 Color.WHITE.rgb
             )
+
+            // Draw search icon
+            val searchIconX = width - screenPadding - 90
+            val searchIconY = screenPadding + (titleHeight - 16) / 2
+            
+            // Draw magnifying glass
+            val iconSize = 16
+            val centerX = searchIconX + iconSize / 2
+            val centerY = searchIconY + iconSize / 2
+            val radius = 5
+            
+            // Draw circle outline (thicker)
+            for (i in 0..1) {
+                drawCircle(context, centerX, centerY, radius + i, Color(170, 170, 170))
+            }
+            
+            // Draw handle
+            val handleAngle = Math.PI * 0.75 // Angled at 45 degrees
+            val handleLength = 6
+            val startX = centerX + (radius * Math.cos(handleAngle)).toInt()
+            val startY = centerY + (radius * Math.sin(handleAngle)).toInt()
+            val endX = startX + (handleLength * Math.cos(handleAngle)).toInt()
+            val endY = startY + (handleLength * Math.sin(handleAngle)).toInt()
+            
+            // Draw thick handle
+            for (i in 0..1) {
+                context.fill(
+                    startX + i,
+                    startY + i,
+                    endX + i + 1,
+                    endY + i + 1,
+                    Color(170, 170, 170).rgb
+                )
+            }
+        } else {
+            // Draw expanded search bar
+            val searchBoxColor = Color(32, 32, 32, 255)
+            context.fill(
+                screenPadding + 5,
+                screenPadding + 5,
+                width - screenPadding - 5,
+                screenPadding + titleHeight - 5,
+                searchBoxColor.rgb
+            )
+            
+            // Draw search text
+            context.drawTextWithShadow(
+                textRenderer,
+                Text.literal(if (searchText.isEmpty()) "Search..." else searchText),
+                screenPadding + 15,
+                screenPadding + (titleHeight - textRenderer.fontHeight) / 2,
+                if (searchText.isEmpty()) Color(90, 90, 90).rgb else Color.WHITE.rgb
+            )
         }
+
+        // Draw sidebar background with border
+        context.fill(screenPadding, screenPadding + titleHeight + screenPadding, 
+            screenPadding + sidebarWidth, height - screenPadding, Color(24, 24, 24, 255).rgb)
+        drawBorder(context, screenPadding, screenPadding + titleHeight + screenPadding, 
+            screenPadding + sidebarWidth, height - screenPadding, borderColor.rgb)
 
         // Draw categories in the middle
         var categoryY = height / 2 - (categories.size * categoryHeight) / 2
         categories.forEach { category ->
             val selected = category == selectedCategory
             
+            // Draw category with proper padding
             context.drawTextWithShadow(
                 textRenderer,
                 Text.literal(category.displayName),
-                10,
+                screenPadding + 10,
                 categoryY,
                 if (selected) Color.WHITE.rgb else Color(170, 170, 170).rgb
             )
@@ -103,33 +128,80 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
             categoryY += categoryHeight
         }
 
+        // Draw modules area background
+        val modulesAreaX = screenPadding + sidebarWidth + screenPadding
+        val modulesAreaY = screenPadding + titleHeight + screenPadding
+        val modulesAreaWidth = width - modulesAreaX - screenPadding
+        val modulesAreaHeight = height - modulesAreaY - screenPadding
+        
+        // Draw background and border for modules area
+        context.fill(
+            modulesAreaX,
+            modulesAreaY,
+            modulesAreaX + modulesAreaWidth,
+            modulesAreaY + modulesAreaHeight,
+            Color(24, 24, 24, 255).rgb
+        )
+        drawBorder(
+            context,
+            modulesAreaX,
+            modulesAreaY,
+            modulesAreaX + modulesAreaWidth,
+            modulesAreaY + modulesAreaHeight,
+            Color(48, 48, 48, 255).rgb
+        )
+
         // Draw selected category title in content area
         context.drawTextWithShadow(
             textRenderer,
             Text.literal(selectedCategory.displayName),
-            sidebarWidth + 10,
-            20,
+            modulesAreaX + screenPadding,
+            modulesAreaY + screenPadding,
             Color.WHITE.rgb
         )
 
         // Draw modules for selected category
-        var moduleY = 50
-        val moduleX = sidebarWidth + 10
-        val contentWidth = width - sidebarWidth - 20 // Total available width
-        val moduleWidth = (contentWidth * 0.8).toInt() // 80% of available width
+        var moduleY = screenPadding + titleHeight + screenPadding
+        val moduleX = screenPadding + sidebarWidth + screenPadding
+        val contentWidth = width - moduleX - screenPadding // Total available width
+        val moduleWidth = (contentWidth * 0.95).toInt() // 95% of available width
         val moduleHeight = 40 // Increased height for description
         val switchSize = 16 // Size of the switch
         val padding = 10 // Padding around elements
         
         ModuleManager.getModulesByCategory(selectedCategory).forEach { module ->
-            // Draw module background
+            // Draw module background with layers for depth
             val moduleColor = if (module.enabled) Color(46, 46, 46, 255) else Color(32, 32, 32, 255)
+            val borderColor = if (module.enabled) Color(78, 201, 176, 100) else Color(48, 48, 48, 255)
+            
+            // Shadow layer
+            context.fill(
+                moduleX + 2,
+                moduleY + 2,
+                moduleX + moduleWidth + 2,
+                moduleY + moduleHeight + 2,
+                Color(0, 0, 0, 50).rgb
+            )
+            
+            // Main background
             context.fill(
                 moduleX,
                 moduleY,
                 moduleX + moduleWidth,
                 moduleY + moduleHeight,
                 moduleColor.rgb
+            )
+            
+            // Draw border
+            drawBorder(context, moduleX, moduleY, moduleX + moduleWidth, moduleY + moduleHeight, borderColor.rgb)
+            
+            // Draw subtle highlight line at top
+            context.fill(
+                moduleX + 1,
+                moduleY + 1,
+                moduleX + moduleWidth - 1,
+                moduleY + 2,
+                Color(255, 255, 255, 15).rgb
             )
             
             // Draw module name
@@ -150,45 +222,62 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
                 Color(170, 170, 170).rgb
             )
             
-            // Draw switch background
-            val switchX = moduleX + moduleWidth - switchSize - padding
+            // Draw switch (realistic toggle style)
+            val switchX = moduleX + moduleWidth - switchSize * 2 - padding
             val switchY = moduleY + (moduleHeight - switchSize) / 2
-            val switchBgColor = if (module.enabled) Color(78, 201, 176) else Color(58, 58, 58)
             
-            // Draw switch background (rounded rectangle using multiple fills)
-            context.fill(
-                switchX + 2,
-                switchY,
-                switchX + switchSize - 2,
-                switchY + switchSize,
-                switchBgColor.rgb
-            )
+            // Draw switch track
+            val trackColor = if (module.enabled) Color(78, 201, 176, 180) else Color(58, 58, 58, 180)
+            val trackWidth = switchSize * 2
+            val trackHeight = switchSize - 4
+            
+            // Track background
             context.fill(
                 switchX,
                 switchY + 2,
-                switchX + switchSize,
-                switchY + switchSize - 2,
-                switchBgColor.rgb
+                switchX + trackWidth,
+                switchY + trackHeight + 2,
+                Color(20, 20, 20).rgb
             )
             
-            // Draw switch knob
-            val knobSize = switchSize - 6
-            val knobX = if (module.enabled) switchX + switchSize - knobSize - 3 else switchX + 3
-            val knobColor = if (module.enabled) Color.WHITE else Color(170, 170, 170)
+            // Track inner
+            context.fill(
+                switchX + 1,
+                switchY + 3,
+                switchX + trackWidth - 1,
+                switchY + trackHeight + 1,
+                trackColor.rgb
+            )
             
+            // Draw knob with 3D effect
+            val knobSize = switchSize - 2
+            val knobX = if (module.enabled) switchX + trackWidth - knobSize - 1 else switchX + 1
+            
+            // Knob shadow
             context.fill(
                 knobX + 1,
-                switchY + 3,
-                knobX + knobSize - 1,
-                switchY + knobSize + 3,
-                knobColor.rgb
+                switchY + 1,
+                knobX + knobSize + 1,
+                switchY + knobSize + 1,
+                Color(0, 0, 0, 100).rgb
             )
+            
+            // Knob main body
             context.fill(
                 knobX,
-                switchY + 4,
+                switchY,
                 knobX + knobSize,
-                switchY + knobSize + 2,
-                knobColor.rgb
+                switchY + knobSize,
+                Color.WHITE.rgb
+            )
+            
+            // Knob highlight
+            context.fill(
+                knobX + 2,
+                switchY + 2,
+                knobX + knobSize - 2,
+                switchY + 4,
+                Color(255, 255, 255, 180).rgb
             )
             
             moduleY += moduleHeight + padding
@@ -201,8 +290,18 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
                 close()
                 return true
             }
-            mouseX >= 10 && mouseX < sidebarWidth - 10 && mouseY >= 35 && mouseY <= 50 -> {
+            mouseX >= width - screenPadding - 90 && 
+            mouseX <= width - screenPadding - 70 &&
+            mouseY >= screenPadding && 
+            mouseY <= screenPadding + titleHeight -> {
                 isSearching = true
+                return true
+            }
+            isSearching && mouseX >= screenPadding && 
+            mouseX <= width - screenPadding &&
+            mouseY >= screenPadding && 
+            mouseY <= screenPadding + titleHeight -> {
+                // Keep searching active when clicking in search area
                 return true
             }
             isSearching -> {
@@ -280,8 +379,24 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
     }
 
     private fun isMouseOverCloseButton(mouseX: Int, mouseY: Int): Boolean {
-        val x = width - 20
-        val y = 5
+        val x = width - screenPadding - 15
+        val y = screenPadding + (titleHeight - textRenderer.fontHeight) / 2
         return mouseX >= x && mouseX <= x + 10 && mouseY >= y && mouseY <= y + 10
+    }
+
+    private fun drawBorder(context: DrawContext, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
+        // Draw border lines
+        context.fill(x1, y1, x2, y1 + 1, color) // Top
+        context.fill(x1, y2 - 1, x2, y2, color) // Bottom
+        context.fill(x1, y1, x1 + 1, y2, color) // Left
+        context.fill(x2 - 1, y1, x2, y2, color) // Right
+    }
+
+    private fun drawCircle(context: DrawContext, x: Int, y: Int, radius: Int, color: Color) {
+        // Draw a simple circle using multiple horizontal lines
+        for (dy in -radius..radius) {
+            val dx = Math.sqrt((radius * radius - dy * dy).toDouble()).toInt()
+            context.fill(x - dx, y + dy, x + dx, y + dy + 1, color.rgb)
+        }
     }
 }

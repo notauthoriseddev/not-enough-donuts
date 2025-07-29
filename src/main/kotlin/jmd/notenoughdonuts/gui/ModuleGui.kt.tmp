@@ -1,0 +1,15 @@
+    private fun drawBorder(context: DrawContext, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
+        // Draw border lines
+        context.fill(x1, y1, x2, y1 + 1, color) // Top
+        context.fill(x1, y2 - 1, x2, y2, color) // Bottom
+        context.fill(x1, y1, x1 + 1, y2, color) // Left
+        context.fill(x2 - 1, y1, x2, y2, color) // Right
+    }
+
+    private fun drawCircle(context: DrawContext, x: Int, y: Int, radius: Int, color: Color) {
+        // Draw a simple circle using multiple horizontal lines
+        for (dy in -radius..radius) {
+            val dx = Math.sqrt((radius * radius - dy * dy).toDouble()).toInt()
+            context.fill(x - dx, y + dy, x + dx, y + dy + 1, color.rgb)
+        }
+    }
