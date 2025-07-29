@@ -20,10 +20,21 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
     private val screenPadding: Int = 10
     private val titleHeight: Int = 40
     private var searchBarY: Int = 0
+    private var modulesAreaX: Int = 0
+    private var modulesAreaY: Int = 0
+    private var modulesAreaWidth: Int = 0
+    private var modulesAreaHeight: Int = 0
 
     init {
         // Initialize dependent values after Screen is constructed
         this.searchBarY = screenPadding + (titleHeight - 9) / 2  // 9 is default font height
+    }
+
+    private fun updateModulesArea() {
+        modulesAreaX = screenPadding + sidebarWidth + screenPadding
+        modulesAreaY = screenPadding + titleHeight + screenPadding
+        modulesAreaWidth = width - modulesAreaX - screenPadding
+        modulesAreaHeight = height - modulesAreaY - screenPadding
     }
 
     override fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
@@ -128,11 +139,8 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
             categoryY += categoryHeight
         }
 
-        // Draw modules area background
-        val modulesAreaX = screenPadding + sidebarWidth + screenPadding
-        val modulesAreaY = screenPadding + titleHeight + screenPadding
-        val modulesAreaWidth = width - modulesAreaX - screenPadding
-        val modulesAreaHeight = height - modulesAreaY - screenPadding
+        // Update and draw modules area
+        updateModulesArea()
         
         // Draw background and border for modules area
         context.fill(
@@ -161,8 +169,8 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
         )
 
         // Draw modules for selected category
-        var moduleY = screenPadding + titleHeight + screenPadding
-        val moduleX = screenPadding + sidebarWidth + screenPadding
+        var moduleY = modulesAreaY + screenPadding * 3 // Extra padding after category title
+        val moduleX = modulesAreaX + screenPadding
         val contentWidth = width - moduleX - screenPadding // Total available width
         val moduleWidth = (contentWidth * 0.95).toInt() // 95% of available width
         val moduleHeight = 40 // Increased height for description
@@ -321,24 +329,24 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
         }
 
         // Handle module clicks
-        if (mouseX >= sidebarWidth + 10) {
-            val contentWidth = width - sidebarWidth - 20
-            val moduleWidth = (contentWidth * 0.8).toInt()
+        if (mouseX >= modulesAreaX && mouseY >= modulesAreaY) {
+            val contentWidth = width - modulesAreaX - screenPadding
+            val moduleWidth = (contentWidth * 0.95).toInt()
             val moduleHeight = 40
             val padding = 10
             val switchSize = 16
-            val moduleX = sidebarWidth + 10
             
             // Calculate which module was clicked
-            val moduleY = ((mouseY - 50) / (moduleHeight + padding)).toInt()
+            val relativeY = mouseY - modulesAreaY - screenPadding * 3
+            val moduleY = (relativeY / (moduleHeight + padding)).toInt()
             val modules = ModuleManager.getModulesByCategory(selectedCategory)
             
             if (moduleY in modules.indices) {
                 // Check if click was on the switch
-                val switchX = moduleX + moduleWidth - switchSize - padding
-                val switchY = 50 + moduleY * (moduleHeight + padding) + (moduleHeight - switchSize) / 2
+                val switchX = modulesAreaX + moduleWidth - switchSize * 2 - padding
+                val switchY = modulesAreaY + screenPadding * 3 + moduleY * (moduleHeight + padding) + (moduleHeight - switchSize) / 2
                 
-                if (mouseX >= switchX && mouseX <= switchX + switchSize &&
+                if (mouseX >= switchX && mouseX <= switchX + switchSize * 2 &&
                     mouseY >= switchY && mouseY <= switchY + switchSize) {
                     ModuleManager.toggleModule(modules[moduleY])
                     return true
