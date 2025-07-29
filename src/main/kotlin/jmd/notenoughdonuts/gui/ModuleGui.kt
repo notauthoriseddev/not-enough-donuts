@@ -5,6 +5,7 @@ import net.minecraft.client.gui.DrawContext
 import net.minecraft.text.Text
 import java.awt.Color
 import jmd.notenoughdonuts.gui.Category
+import jmd.notenoughdonuts.modules.ModuleManager
 
 class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
     private val categories: List<Category> = Category.values().toList()
@@ -110,6 +111,88 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
             20,
             Color.WHITE.rgb
         )
+
+        // Draw modules for selected category
+        var moduleY = 50
+        val moduleX = sidebarWidth + 10
+        val contentWidth = width - sidebarWidth - 20 // Total available width
+        val moduleWidth = (contentWidth * 0.8).toInt() // 80% of available width
+        val moduleHeight = 40 // Increased height for description
+        val switchSize = 16 // Size of the switch
+        val padding = 10 // Padding around elements
+        
+        ModuleManager.getModulesByCategory(selectedCategory).forEach { module ->
+            // Draw module background
+            val moduleColor = if (module.enabled) Color(46, 46, 46, 255) else Color(32, 32, 32, 255)
+            context.fill(
+                moduleX,
+                moduleY,
+                moduleX + moduleWidth,
+                moduleY + moduleHeight,
+                moduleColor.rgb
+            )
+            
+            // Draw module name
+            context.drawTextWithShadow(
+                textRenderer,
+                Text.literal(module.name),
+                moduleX + padding,
+                moduleY + padding,
+                if (module.enabled) Color.WHITE.rgb else Color(170, 170, 170).rgb
+            )
+
+            // Draw module description
+            context.drawTextWithShadow(
+                textRenderer,
+                Text.literal(module.description),
+                moduleX + padding,
+                moduleY + padding + 12,
+                Color(170, 170, 170).rgb
+            )
+            
+            // Draw switch background
+            val switchX = moduleX + moduleWidth - switchSize - padding
+            val switchY = moduleY + (moduleHeight - switchSize) / 2
+            val switchBgColor = if (module.enabled) Color(78, 201, 176) else Color(58, 58, 58)
+            
+            // Draw switch background (rounded rectangle using multiple fills)
+            context.fill(
+                switchX + 2,
+                switchY,
+                switchX + switchSize - 2,
+                switchY + switchSize,
+                switchBgColor.rgb
+            )
+            context.fill(
+                switchX,
+                switchY + 2,
+                switchX + switchSize,
+                switchY + switchSize - 2,
+                switchBgColor.rgb
+            )
+            
+            // Draw switch knob
+            val knobSize = switchSize - 6
+            val knobX = if (module.enabled) switchX + switchSize - knobSize - 3 else switchX + 3
+            val knobColor = if (module.enabled) Color.WHITE else Color(170, 170, 170)
+            
+            context.fill(
+                knobX + 1,
+                switchY + 3,
+                knobX + knobSize - 1,
+                switchY + knobSize + 3,
+                knobColor.rgb
+            )
+            context.fill(
+                knobX,
+                switchY + 4,
+                knobX + knobSize,
+                switchY + knobSize + 2,
+                knobColor.rgb
+            )
+            
+            moduleY += moduleHeight + padding
+        }
     }
 
     override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
@@ -135,6 +218,32 @@ class ModuleGui : Screen(Text.literal("Not Enough Donuts")) {
             if (categoryIndex in categories.indices) {
                 selectedCategory = categories[categoryIndex]
                 return true
+            }
+        }
+
+        // Handle module clicks
+        if (mouseX >= sidebarWidth + 10) {
+            val contentWidth = width - sidebarWidth - 20
+            val moduleWidth = (contentWidth * 0.8).toInt()
+            val moduleHeight = 40
+            val padding = 10
+            val switchSize = 16
+            val moduleX = sidebarWidth + 10
+            
+            // Calculate which module was clicked
+            val moduleY = ((mouseY - 50) / (moduleHeight + padding)).toInt()
+            val modules = ModuleManager.getModulesByCategory(selectedCategory)
+            
+            if (moduleY in modules.indices) {
+                // Check if click was on the switch
+                val switchX = moduleX + moduleWidth - switchSize - padding
+                val switchY = 50 + moduleY * (moduleHeight + padding) + (moduleHeight - switchSize) / 2
+                
+                if (mouseX >= switchX && mouseX <= switchX + switchSize &&
+                    mouseY >= switchY && mouseY <= switchY + switchSize) {
+                    ModuleManager.toggleModule(modules[moduleY])
+                    return true
+                }
             }
         }
 
